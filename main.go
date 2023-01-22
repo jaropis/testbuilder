@@ -3,8 +3,11 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func getHeaderCondition(current_value string) bool {
@@ -46,16 +49,12 @@ func readAndFill(filepath string) map[string][]string {
 	return all_questions
 }
 
-func main() {
-	header := ` \documentclass[12pt]{article}
-	\usepackage{test}
-	\begin{document}
-	\fancyhead[LO]{\rightmark{\textbf{Egzamin 2023}\hspace{\stretch{1}}Units 1-2.}}
-   \begin{enumerate}`
-	footer := `\end{enumerate}
-	\end{document}`
-	all_questions := readAndFill("assets/egzamin2022.txt")
-	texFile, err := os.Create("texspace/exam.tex")
+func createTest(
+	all_questions map[string][]string,
+	exam_path string,
+	header string,
+	footer string) {
+	texFile, err := os.Create(exam_path)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -64,6 +63,13 @@ func main() {
 	for key, value := range all_questions {
 		oneLine := `\item`
 		fmt.Fprintf(texFile, "%s %s\n\n", oneLine, key)
+		// if the length of value is 3 or more, shuffle (2 is usually the true/false case)
+		if len(value) > 2 {
+			rand.Seed(time.Now().UnixNano())
+			rand.Shuffle(len(value), func(i, j int) {
+				value[i], value[j] = value[j], value[i]
+			})
+		}
 		for i, val := range value {
 			text := ""
 			if i == 0 {
@@ -78,4 +84,24 @@ func main() {
 		fmt.Fprint(texFile, "\n")
 	}
 	fmt.Fprint(texFile, footer)
+}
+
+func main() {
+
+	const header, footer = ` \documentclass[12pt]{article}
+	\usepackage{test}
+	\begin{document}
+	\fancyhead[LO]{\rightmark{\textbf{Egzamin 2023}\hspace{\stretch{1}}}}
+	Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }
+   \begin{enumerate}`, `\end{enumerate}
+	\end{document}`
+
+	all_questions := readAndFill("assets/egzamin2022.txt")
+	for _, val := range []int{1, 2} {
+		createTest(
+			all_questions,
+			"texspace/test"+strconv.Itoa(val)+".tex",
+			header,
+			footer)
+	}
 }

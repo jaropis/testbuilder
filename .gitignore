@@ -1,11 +1,10 @@
 .DS_Store
 exam.tex
-assets/egzamin2021_poprawione.txt
-assets/egzamin2022.txt
+assets/egzamin*
 assets/Unit1_2.tex
-exam.aux
-exam.log
-exam.pdf
-exam.tex
-
+exam.aux*
+exam.log*
+exam.pdf*
+exam.tex*
+test*
 
