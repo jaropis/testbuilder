@@ -2,17 +2,9 @@ package main
 
 import "os"
 
-func saveTestStyle() string {
+func saveTestStyle() {
 	test_sty := `
 	\ProvidesPackage{test}
-%komendy: 
-%odwa{pierwsz}{druga}{trzecia} - daje multiple choice z dwiema mo�liwo�ciami 
-%\otrzy{pierwsz}{druga}{trzecia} - daje multiple choice z trzema mo�liwo�ciami 
-%\ocztery{pierwsza}{druga}{trzecia}{czwarta} - z czterema
-%\OO odst�p 6cm z podkre�leniem
-%\oo odst�p 1.5cm z podkre�leniem
-%\wybdob{tu wypisujemy list� s��w, kt�re pojawi� si� w ramce na grubo}
-%trans{zdanie}{s�owo}{zdanie do transformacji z luk�}
 \topmargin-1cm
 \oddsidemargin-1cm
 \evensidemargin-1cm
@@ -58,5 +50,4 @@ func saveTestStyle() string {
 	texFile, _ := os.Create("test.sty")
 	defer texFile.Close()
 	texFile.WriteString(test_sty)
-
 }

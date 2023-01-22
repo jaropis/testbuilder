@@ -8,7 +8,7 @@ A) To talk to a friend
 B) To get to the other side
 C) The chicken did not cross the street
 
-There should be many such questions, of course. 
+There should be many such questions, of course. Check out the example in the "example_test.txt"
 
 The application will shuffle the order of the questions and also the order inside the answer - what was A will become e.g. C etc. 
 
