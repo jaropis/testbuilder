@@ -1,9 +1,4 @@
-package main
 
-import "os"
-
-func saveTestStyle() {
-	test_sty := `
 	\ProvidesPackage{test}
 \topmargin-1cm
 \oddsidemargin-1cm
@@ -46,8 +41,4 @@ func saveTestStyle() {
 \end{tabular}\\ \vspace{0.5cm}
 }
 \newcommand{\wektor}[1]{\overrightarrow{#1}}
-	`
-	texFile, _ := os.Create("test.sty")
-	defer texFile.Close()
-	texFile.WriteString(test_sty)
-}
+	
