@@ -1,6 +1,7 @@
 .DS_Store
 exam.tex
-assets/egzamin*
+assets/*
+texspace/*
 assets/Unit1_2.tex
 exam.aux*
 exam.log*

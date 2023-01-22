@@ -95,16 +95,16 @@ func main() {
 	Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }
    \begin{enumerate}`, `\end{enumerate}
 	\end{document}`
-	if len(os.Args) < 3 {
-		print("There must be 2 arguments to the call\n")
+	if len(os.Args) != 4 {
+		print("There must be 3 arguments to the call\n")
 		os.Exit(1)
 	}
-	all_questions := readAndFill("assets/egzamin2022.txt")
-	loopCount, _ := strconv.Atoi(os.Args[2])
+	all_questions := readAndFill(os.Args[1])
+	loopCount, _ := strconv.Atoi(os.Args[3])
 	for idx := 0; idx < loopCount; idx++ {
 		createTest(
 			all_questions,
-			os.Args[1]+strconv.Itoa(idx+1)+".tex",
+			os.Args[2]+strconv.Itoa(idx+1)+".tex",
 			header,
 			footer)
 	}
