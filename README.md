@@ -22,6 +22,10 @@ Download the binary for your operating system and run providing the sourcefile w
 Example usage:
 `./tb example_test.txt res_test 8 "Medicine exam 2023" "Name and Surname \underline{\hspace{11.5cm}}"`
 
-This will output 8 LaTeX files named from `res_test1.tex` to `res_test8.tex` and the LaTeX style file `test.sty` to help with the compilation. The resulting pdf will look as follows:
+This will output 8 LaTeX files named from `res_test1.tex` to `res_test8.tex` and the LaTeX style file `test.sty` to help with the compilation. All the files will have different orders, so the first resulting pdf may look like this:
 
-![compiled_test](res_test1.png)
+![compiled_test1](res_test1.png)
+
+and the third like this:
+
+![compiled_test3](res_test3.png)
