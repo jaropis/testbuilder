@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -86,7 +87,7 @@ func createTest(
 	fmt.Fprint(texFile, footer)
 }
 
-func saveTestStyle() {
+func saveTestStyle(path string) {
 	test_sty := `
 \ProvidesPackage{test}
 \topmargin-1cm
@@ -131,7 +132,7 @@ func saveTestStyle() {
 }
 \newcommand{\wektor}[1]{\overrightarrow{#1}}
 	`
-	texFile, _ := os.Create("test.sty")
+	texFile, _ := os.Create(filepath.Join(filepath.Dir(path), "test.sty"))
 	defer texFile.Close()
 	texFile.WriteString(test_sty)
 }
@@ -178,5 +179,5 @@ func main() {
 			header,
 			footer)
 	}
-	saveTestStyle()
+	saveTestStyle(os.Args[2])
 }

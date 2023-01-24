@@ -17,7 +17,7 @@ You will get a nice looking test sheed after compiling with (pdf)LaTeX.
 
 ## How to use it
 
-Download the binary for your operating system and run providing the sourcefile with the test in the above format, the output file name (say, "test" will get you a bunch of LaTeX files: "test1.tex", "test2.tex" etc.), the number of different tests you want to generate, the title of the test (e.g. Medicine exam 2023) and what should go before the beginning of the test, usually something like: Name, Surname ________________________
+Download the binary for your operating system and run providing the sourcefile with the test in the above format, the output file name (say, "test" will get you a bunch of LaTeX files: "test1.tex", "test2.tex" etc. -- this can also include full path if you want to save the files and test.sty in a specific location), the number of different tests you want to generate, the title of the test (e.g. Medicine exam 2023) and what should go before the beginning of the test, usually something like: Name, Surname ________________________
 
 Example usage:
 `./tb example_test.txt res_test 8 "Medicine exam 2023" "Name and Surname \underline{\hspace{11.5cm}}"`
