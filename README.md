@@ -24,4 +24,4 @@ Example usage:
 
 This will output 8 LaTeX files named from `res_test1.tex` to `res_test8.tex` and the LaTeX style file `test.sty` to help with the compilation. The resulting pdf will look as follows:
 
-xfun::embed_file("res_test1.pdf")
+![compiled_test](res_test1.png)
