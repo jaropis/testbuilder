@@ -88,7 +88,7 @@ func createTest(
 
 func saveTestStyle() {
 	test_sty := `
-	\ProvidesPackage{test}
+\ProvidesPackage{test}
 \topmargin-1cm
 \oddsidemargin-1cm
 \evensidemargin-1cm
@@ -138,17 +138,37 @@ func saveTestStyle() {
 
 func main() {
 
-	const header, footer = ` \documentclass[12pt]{article}
+	const header_start = ` \documentclass[12pt]{article}
 	\usepackage{test}
 	\begin{document}
-	\fancyhead[LO]{\rightmark{\textbf{Egzamin 2023}\hspace{\stretch{1}}}}
-	Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }
-   \begin{enumerate}`, `\end{enumerate}
+	\fancyhead[LO]{\rightmark{\textbf{`
+	const header_middle = `}\hspace{\stretch{1}}}}`
+	const header_end = `\begin{enumerate}`
+	const footer = `\end{enumerate}
 	\end{document}`
-	if len(os.Args) != 4 {
-		print("There must be 3 arguments to the call\n")
+	if len(os.Args) != 6 {
+		print(`There must be 5 arguments to the call
+1) the source file with the test in format described by the README
+2) the result file name - it will be extended by the number of the individual file
+3) the number of files to generate (and integer number, of course)
+4) the title of the examination, e.g. Egzamin 2023 (this is in Polish), but your can be in a different language ;)
+5) what you want to go before the test, in my case this will be: "Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }", which stands for name, surname and studies followed by an underlined space of length 11.5 cm  )`)
 		os.Exit(1)
 	}
+	var examTitle string
+	var beforeTest string
+	if os.Args[4] == "_" {
+		examTitle = "Egzamin 2023"
+	} else {
+		examTitle = os.Args[4]
+	}
+
+	if os.Args[5] == "_" {
+		beforeTest = `Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }`
+	} else {
+		beforeTest = os.Args[5]
+	}
+	header := header_start + examTitle + header_middle + beforeTest + header_end
 	all_questions := readAndFill(os.Args[1])
 	loopCount, _ := strconv.Atoi(os.Args[3])
 	for idx := 0; idx < loopCount; idx++ {
