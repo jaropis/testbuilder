@@ -133,7 +133,8 @@ func saveTestStyle(path string) {
 }
 \newcommand{\wektor}[1]{\overrightarrow{#1}}
 	`
-	texFile, _ := os.Create(filepath.Join(filepath.Dir(path), "test.sty"))
+	wd, _ := os.Getwd()
+	texFile, _ := os.Create(filepath.Join(wd, filepath.Dir(path), "test.sty"))
 	defer texFile.Close()
 	texFile.WriteString(test_sty)
 }
@@ -174,8 +175,9 @@ func main() {
 	all_questions := readAndFill(os.Args[1])
 	loopCount, _ := strconv.Atoi(os.Args[3])
 	var outputFileNames []string
+	wd, _ := os.Getwd()
 	for idx := 0; idx < loopCount; idx++ {
-		outputfilename := os.Args[2] + strconv.Itoa(idx+1) + ".tex"
+		outputfilename := filepath.Join(wd, os.Args[2]+strconv.Itoa(idx+1)+".tex")
 		outputFileNames = append(outputFileNames, outputfilename)
 		createTest(
 			all_questions,
@@ -184,7 +186,11 @@ func main() {
 			footer)
 	}
 	saveTestStyle(os.Args[2])
+	oldPath := wd
+	os.Chdir(filepath.Dir(outputFileNames[0]))
 	for _, filename := range outputFileNames {
-		exec.Command("pdflatex " + filename)
+		cmd := exec.Command("/Library/TeX/texbin/pdflatex", filename)
+		cmd.Output()
 	}
+	os.Chdir(oldPath)
 }
