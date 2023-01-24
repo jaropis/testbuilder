@@ -1,7 +1,7 @@
 # testbuilder
 
 ## What it is?
-A small app for building tests in LaTeX from tests in the following form 
+A small app for building tests in **LaTeX** from tests in the following form 
 
 Why did the chicken cross the street?
 
