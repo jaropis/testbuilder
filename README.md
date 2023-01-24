@@ -1,11 +1,14 @@
 # testbuilder
 
 ## What it is?
-A small app for building tests in latex from tests in the following form 
+A small app for building tests in LaTeX from tests in the following form 
 
 Why did the chicken cross the street?
+
 A) To talk to a friend
+
 B) To get to the other side
+
 C) The chicken did not cross the street
 
 There should be many such questions, of course. Check out the example in the "example_test.txt"
