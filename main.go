@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -172,12 +173,18 @@ func main() {
 	header := header_start + examTitle + header_middle + beforeTest + header_end
 	all_questions := readAndFill(os.Args[1])
 	loopCount, _ := strconv.Atoi(os.Args[3])
+	var outputFileNames []string
 	for idx := 0; idx < loopCount; idx++ {
+		outputfilename := os.Args[2] + strconv.Itoa(idx+1) + ".tex"
+		outputFileNames = append(outputFileNames, outputfilename)
 		createTest(
 			all_questions,
-			os.Args[2]+strconv.Itoa(idx+1)+".tex",
+			outputfilename,
 			header,
 			footer)
 	}
 	saveTestStyle(os.Args[2])
+	for _, filename := range outputFileNames {
+		exec.Command("pdflatex " + filename)
+	}
 }
