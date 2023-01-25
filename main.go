@@ -81,7 +81,8 @@ func createTest(
 			} else {
 				text = "\\hspace{1cm}c)"
 			}
-			fmt.Fprintf(texFile, "%s~%s", text, val)
+			v_percent := strings.Replace(val, "%", "\\%", -1)
+			fmt.Fprintf(texFile, "%s~%s", text, v_percent)
 		}
 		fmt.Fprint(texFile, "\n")
 	}
