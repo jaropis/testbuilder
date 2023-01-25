@@ -81,7 +81,7 @@ func createTest(
 			} else {
 				text = "\\hspace{1cm}c)"
 			}
-			fmt.Fprintf(texFile, "%s %s", text, val)
+			fmt.Fprintf(texFile, "%s~%s", text, val)
 		}
 		fmt.Fprint(texFile, "\n")
 	}
@@ -95,7 +95,7 @@ func saveTestStyle(path string) {
 \oddsidemargin-1cm
 \evensidemargin-1cm
 \textwidth17cm
-\textheight24.5cm
+\textheight23.5cm
 \setlength{\parindent}{0pt}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -109,6 +109,9 @@ func saveTestStyle(path string) {
 \renewcommand{\thesection}{\Roman{section}}
 \renewcommand{\arraystretch}{1.3}
 \pagestyle{fancy}
+\fancyhf{}
+\cfoot{\thepage}
+\pagenumbering{arabic}
 \newcommand{\I}{\mathrm{i}}
 \newcommand{\E}{\mathrm{e}}
 \newcommand{\lin}{\mathrm{lin}}
@@ -191,6 +194,8 @@ func main() {
 	for _, filename := range outputFileNames {
 		cmd := exec.Command("/Library/TeX/texbin/pdflatex", filename)
 		cmd.Output()
+		cmd2 := exec.Command("/Library/TeX/texbin/pdflatex", filename)
+		cmd2.Output()
 	}
 	os.Chdir(oldPath)
 }
