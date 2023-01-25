@@ -13,7 +13,7 @@ There should be many such questions, of course. Check out the example in the "ex
 
 The application will shuffle the order of the questions and also the order inside the answer - what was A will become e.g. C etc. 
 
-You will get a nice looking test sheed after compiling with (pdf)LaTeX. 
+You will get a nice looking test sheet after compiling with (pdf)LaTeX. 
 
 ## How to use it
 
