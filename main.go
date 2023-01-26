@@ -12,10 +12,13 @@ import (
 	"time"
 )
 
+// This function checks if the current_value string passed as an argument does not have any of the prefixes "A)", "B)", "C)", "D)".
+// It returns true if none of the prefixes are present, and false if any of them are present.
 func getHeaderCondition(current_value string) bool {
 	return !strings.HasPrefix(current_value, "A)") && !strings.HasPrefix(current_value, "B)") && !strings.HasPrefix(current_value, "C)") && !strings.HasPrefix(current_value, "D)")
 }
 
+// this function reads the file from the provided filepath and fills a map with the questions as the keys and their respective answers as the values.
 func readAndFill(filepath string) map[string][]string {
 	file, err := os.Open(filepath)
 	all_questions := make(map[string][]string)
@@ -51,6 +54,7 @@ func readAndFill(filepath string) map[string][]string {
 	return all_questions
 }
 
+// function actually creating the test
 func createTest(
 	all_questions map[string][]string,
 	exam_path string,
@@ -89,6 +93,7 @@ func createTest(
 	fmt.Fprint(texFile, footer)
 }
 
+// function saving the test.sty file to the same location as the test LaTeX files (necessary for compilation)
 func saveTestStyle(path string) {
 	test_sty := `
 \ProvidesPackage{test}
@@ -143,6 +148,7 @@ func saveTestStyle(path string) {
 	texFile.WriteString(test_sty)
 }
 
+// where it all happens
 func main() {
 
 	const header_start = ` \documentclass[12pt]{article}
