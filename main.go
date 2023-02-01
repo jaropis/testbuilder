@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ledongthuc/pdf"
 )
 
 // This function checks if the current_value string passed as an argument does not have any of the prefixes "A)", "B)", "C)", "D)".
@@ -148,6 +150,47 @@ func saveTestStyle(path string) {
 	texFile.WriteString(test_sty)
 }
 
+func getPdfFiles() ([]string, error) {
+	var pdfFiles []string
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if filepath.Ext(path) == ".pdf" {
+			if pages, _ := pageCounter(path); pages%2 == 0 { // necessary for printing
+				pdfFiles = append(pdfFiles, path)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return pdfFiles, nil
+}
+
+func merge() {
+	// get pdf files
+	files, err := getPdfFiles()
+	if err != nil {
+		fmt.Printf("error getting pdf files: %v\n", err)
+		return
+	}
+
+	command := []string{"merge", "merged_test.pdf"}
+	command = append(command, files...)
+	exec.Command("/opt/homebrew/bin/pdfcpu", command...)
+}
+
+func pageCounter(path string) (int, error) {
+	f, r, err := pdf.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return r.NumPage(), err
+}
+
 // where it all happens
 func main() {
 
@@ -157,15 +200,24 @@ func main() {
 	\fancyhead[LO]{\rightmark{\textbf{`
 	const header_middle = `}\hspace{\stretch{1}}}}`
 	const header_end = `\begin{enumerate}`
-	const footer = `\end{enumerate}
+	var footer1 = `\end{enumerate}
 	\end{document}`
-	if len(os.Args) != 6 {
+	var footer2 = `\end{enumerate}
+	\newpage
+
+	.
+
+	\end{document}`
+	var footer string
+	if len(os.Args) != 8 {
 		print(`There must be 5 arguments to the call
 1) the source file with the test in format described by the README
 2) the result file name - it will be extended by the number of the individual file
 3) the number of files to generate (and integer number, of course)
 4) the title of the examination, e.g. Egzamin 2023 (this is in Polish), but your can be in a different language ;)
-5) what you want to go before the test, in my case this will be: "Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }", which stands for name, surname and studies followed by an underlined space of length 11.5 cm  )`)
+5) what you want to go before the test, in my case this will be: "Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }", which stands for name, surname and studies followed by an underlined space of length 11.5 cm  )
+6) if you want a new page at the end of the test, write "newline", otherwise put _
+7) if you want the resulting files to be merged, write "merge" - it will only merge file with an even number of pages so that printing is facilitated`)
 		os.Exit(1)
 	}
 	var examTitle string
@@ -180,6 +232,12 @@ func main() {
 		beforeTest = `Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }`
 	} else {
 		beforeTest = os.Args[5]
+	}
+
+	if os.Args[6] == "newpage" {
+		footer = footer2
+	} else {
+		footer = footer1
 	}
 	header := header_start + examTitle + header_middle + beforeTest + header_end
 	all_questions := readAndFill(os.Args[1])
@@ -204,5 +262,9 @@ func main() {
 		cmd2 := exec.Command("/Library/TeX/texbin/pdflatex", filename)
 		cmd2.Output()
 	}
+	if os.Args[7] == "merge" {
+		merge()
+	}
 	os.Chdir(oldPath)
+
 }
