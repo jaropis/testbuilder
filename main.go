@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dslipak/pdf"
+	"github.com/ledongthuc/pdf"
 )
 
 // This function checks if the current_value string passed as an argument does not have any of the prefixes "A)", "B)", "C)", "D)".
@@ -179,7 +179,8 @@ func merge() {
 
 	command := []string{"merge", "merged_test.pdf"}
 	command = append(command, files...)
-	exec.Command("/opt/homebrew/bin/pdfcpu", command...)
+	cmd := exec.Command("/opt/homebrew/bin/pdfcpu", command...)
+	cmd.Output()
 }
 
 func pageCounter(path string) (int, error) {
