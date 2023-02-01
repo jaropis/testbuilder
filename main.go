@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ledongthuc/pdf"
+	"github.com/dslipak/pdf"
 )
 
 // This function checks if the current_value string passed as an argument does not have any of the prefixes "A)", "B)", "C)", "D)".
