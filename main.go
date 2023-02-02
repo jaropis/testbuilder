@@ -159,6 +159,8 @@ func getPdfFiles() ([]string, error) {
 		if filepath.Ext(path) == ".pdf" {
 			if pages, _ := pageCounter(path); pages%2 == 0 { // necessary for printing
 				pdfFiles = append(pdfFiles, path)
+			} else {
+				fmt.Println("file ", path, " has over 6 pages")
 			}
 		}
 		return nil
@@ -263,6 +265,7 @@ func main() {
 		cmd2 := exec.Command("/Library/TeX/texbin/pdflatex", filename)
 		cmd2.Output()
 	}
+	time.Sleep(time.Duration(loopCount) * 5 * time.Second)
 	if os.Args[7] == "merge" {
 		merge()
 	}
