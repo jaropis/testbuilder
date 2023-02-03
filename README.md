@@ -20,7 +20,7 @@ You will get a nice looking test sheet after compiling with (pdf)LaTeX.
 Download the binary for your operating system and run providing the sourcefile with the test in the above format, the output file name (say, "test" will get you a bunch of LaTeX files: "test1.tex", "test2.tex" etc. -- this can also include full path if you want to save the files and test.sty in a specific location), the number of different tests you want to generate, the title of the test (e.g. Medicine exam 2023) and what should go before the beginning of the test, usually something like: Name, Surname ________________________
 
 Example usage:
-`./tb example_test.txt res_test 8 "Medicine exam 2023" "Name and Surname \underline{\hspace{11.5cm}}"`
+`./tb egzamin2023.txt results/res_test 3 "Biophysics, exam 2023" "Name, Surname, Group  \underline{\hspace{11.5cm}}" newpage merge`
 
 This will output 8 LaTeX files named from `res_test1.tex` to `res_test8.tex` and the LaTeX style file `test.sty` to help with the compilation. All the files will be compiled, so you need to have LaTeX installed. All the files will have different orders, so the first resulting pdf may look like this:
 
