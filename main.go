@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -197,7 +199,11 @@ func pageCounter(path string) (int, error) {
 }
 
 // where it all happens
-func main() {
+func generateTest(
+    sourceFile, resultFile string,
+    numFiles int,
+    examTitle, beforeTest, newPage, merge_str string,
+) error {
 
 	const header_start = ` \documentclass[12pt]{article}
 	\usepackage{test}
@@ -214,43 +220,38 @@ func main() {
 
 	\end{document}`
 	var footer string
-	if len(os.Args) != 8 {
-		print(`There must be 5 arguments to the call
-1) the source file with the test in format described by the README
-2) the result file name - it will be extended by the number of the individual file
-3) the number of files to generate (and integer number, of course)
-4) the title of the examination, e.g. Egzamin 2023 (this is in Polish), but your can be in a different language ;)
-5) what you want to go before the test, in my case this will be: "Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }", which stands for name, surname and studies followed by an underlined space of length 11.5 cm  )
-6) if you want a new page at the end of the test, write "newline", otherwise put _
-7) if you want the resulting files to be merged, write "merge" - it will only merge file with an even number of pages so that printing is facilitated`)
-		os.Exit(1)
-	}
-	var examTitle string
-	var beforeTest string
-	if os.Args[4] == "_" {
+	// TO DO - handle in api
+// 	if len(os.Args) != 8 {
+// 		print(`There must be 5 arguments to the call
+// 1) the source file with the test in format described by the README
+// 2) the result file name - it will be extended by the number of the individual file
+// 3) the number of files to generate (and integer number, of course)
+// 4) the title of the examination, e.g. Egzamin 2023 (this is in Polish), but your can be in a different language ;)
+// 5) what you want to go before the test, in my case this will be: "Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }", which stands for name, surname and studies followed by an underlined space of length 11.5 cm  )
+// 6) if you want a new page at the end of the test, write "newline", otherwise put _
+// 7) if you want the resulting files to be merged, write "merge" - it will only merge file with an even number of pages so that printing is facilitated`)
+// 		os.Exit(1)
+// 	}
+
+	if examTitle == "" {
 		examTitle = "Egzamin 2023"
-	} else {
-		examTitle = os.Args[4]
-	}
+	} 
 
-	if os.Args[5] == "_" {
+	if beforeTest == "" {
 		beforeTest = `Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }`
-	} else {
-		beforeTest = os.Args[5]
-	}
+	} 
 
-	if os.Args[6] == "newpage" {
+	if newPage == "newpage" {
 		footer = footer2
 	} else {
 		footer = footer1
 	}
 	header := header_start + examTitle + header_middle + beforeTest + header_end
-	all_questions := readAndFill(os.Args[1])
-	loopCount, _ := strconv.Atoi(os.Args[3])
+	all_questions := readAndFill(sourceFile)
 	var outputFileNames []string
 	wd, _ := os.Getwd()
-	for idx := 0; idx < loopCount; idx++ {
-		outputfilename := filepath.Join(wd, os.Args[2]+strconv.Itoa(idx+1)+".tex")
+	for idx := 0; idx < numFiles; idx++ {
+		outputfilename := filepath.Join(wd, resultFile+strconv.Itoa(idx+1)+".tex")
 		outputFileNames = append(outputFileNames, outputfilename)
 		createTest(
 			all_questions,
@@ -258,7 +259,7 @@ func main() {
 			header,
 			footer)
 	}
-	saveTestStyle(os.Args[2])
+	saveTestStyle(resultFile)
 	oldPath := wd
 	os.Chdir(filepath.Dir(outputFileNames[0]))
 	for _, filename := range outputFileNames {
@@ -267,10 +268,65 @@ func main() {
 		cmd2 := exec.Command("/Library/TeX/texbin/pdflatex", filename)
 		cmd2.Output()
 	}
-	time.Sleep(time.Duration(loopCount) * 5 * time.Second)
-	if os.Args[7] == "merge" {
+	time.Sleep(time.Duration(numFiles) * 5 * time.Second)
+	if merge_str == "merge" {
 		merge()
 	}
 	os.Chdir(oldPath)
+// TODO handle error
+return nil
+}
 
+func generateTestHandler(w http.ResponseWriter, r *http.Request) {
+    // Parse JSON payload from the request
+    var requestPayload struct {
+        SourceFile   string `json:"sourceFile"`
+        ResultFile   string `json:"resultFile"`
+        NumFiles     int    `json:"numFiles"`
+        ExamTitle    string `json:"examTitle"`
+        BeforeTest   string `json:"beforeTest"`
+        NewPage      string `json:"newPage"`
+        Merge        string `json:"merge"`
+    }
+
+    err := json.NewDecoder(r.Body).Decode(&requestPayload)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    // Validate input parameters
+    if requestPayload.NumFiles <= 0 {
+        http.Error(w, "Invalid numFiles parameter", http.StatusBadRequest)
+        return
+    }
+
+    // Generate the test using the extracted parameters
+    err = generateTest(
+        requestPayload.SourceFile,
+        requestPayload.ResultFile,
+        requestPayload.NumFiles,
+        requestPayload.ExamTitle,
+        requestPayload.BeforeTest,
+        requestPayload.NewPage,
+        requestPayload.Merge,
+    )
+
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Return a success message or generated files if applicable
+    // For simplicity, let's just return a success message as JSON
+    response := map[string]string{"message": "Test generated successfully"}
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(response)
+}
+
+func main() {
+    http.HandleFunc("/generate-test", generateTestHandler)
+    port := "8080"
+    fmt.Printf("Server listening on port %s...\n", port)
+    http.ListenAndServe(":"+port, nil)
 }
