@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -278,6 +280,40 @@ return nil
 }
 
 func generateTestHandler(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseMultipartForm(10 << 20) // 10 MB limit
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    // Get the uploaded file
+    file, _, err := r.FormFile("sourceFile")
+    if err != nil {
+        http.Error(w, "Failed to retrieve the uploaded file", http.StatusBadRequest)
+        return
+    }
+    defer file.Close()
+
+    // Save the uploaded file to a temporary location on the server
+    tempDir := "./uploads" // Change to your desired directory
+    os.MkdirAll(tempDir, os.ModePerm)
+    tempFile, err := ioutil.TempFile(tempDir, "upload-*.pdf")
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    defer tempFile.Close()
+
+    _, err = io.Copy(tempFile, file)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Now, you can use tempFile.Name() as the path to the uploaded file on the server
+    // Pass this path to the generateTest function
+    sourceFilePath := tempFile.Name()
+
     // Parse JSON payload from the request
     var requestPayload struct {
         SourceFile   string `json:"sourceFile"`
@@ -289,7 +325,6 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
         Merge        string `json:"merge"`
     }
 
-    err := json.NewDecoder(r.Body).Decode(&requestPayload)
     if err != nil {
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
@@ -303,7 +338,7 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
 
     // Generate the test using the extracted parameters
     err = generateTest(
-        requestPayload.SourceFile,
+        sourceFilePath,
         requestPayload.ResultFile,
         requestPayload.NumFiles,
         requestPayload.ExamTitle,
