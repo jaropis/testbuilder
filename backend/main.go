@@ -2,10 +2,8 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -15,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	"github.com/ledongthuc/pdf"
 )
 
@@ -279,89 +279,59 @@ func generateTest(
 return nil
 }
 
+type RequestData struct {
+	NumFiles     int    `schema:"numFiles"`
+	ExamTitle    string `schema:"examTitle"`
+	BeforeTest   string `schema:"beforeTest"`
+	Merge        bool   `schema:"merge"`
+	NewPage      bool   `schema:"newPage"`
+}
+
 func generateTestHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(10 << 20) // 10 MB limit
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
+	// Parse multipart form
+	err := r.ParseMultipartForm(10 << 20) // 10 MB as max size
+	if err != nil {
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
 
-    // Get the uploaded file
-    file, _, err := r.FormFile("sourceFile")
-    if err != nil {
-        http.Error(w, "Failed to retrieve the uploaded file", http.StatusBadRequest)
-        return
-    }
-    defer file.Close()
+	file, _, err := r.FormFile("sourceFile")
+	if err != nil {
+		http.Error(w, "Unable to get file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
 
-    // Save the uploaded file to a temporary location on the server
-    tempDir := "./uploads" // Change to your desired directory
-    os.MkdirAll(tempDir, os.ModePerm)
-    tempFile, err := ioutil.TempFile(tempDir, "upload-*.pdf")
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-    defer tempFile.Close()
+	dst, err := os.Create("filename.txt")
+	if err != nil {
+    	http.Error(w, "Unable to create file on server", http.StatusInternalServerError)
+    	return
+	}
+	defer dst.Close()
 
-    _, err = io.Copy(tempFile, file)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
+	_, err = io.Copy(dst, file)
+	if err != nil {
+    	http.Error(w, "Unable to save file on server", http.StatusInternalServerError)
+    	return
+	}
 
-    // Now, you can use tempFile.Name() as the path to the uploaded file on the server
-    // Pass this path to the generateTest function
-    sourceFilePath := tempFile.Name()
+	decoder := schema.NewDecoder()
+	var requestData RequestData
+	if err := decoder.Decode(&requestData, r.PostForm); err != nil {
+		http.Error(w, "Error decoding form data", http.StatusBadRequest)
+		return
+	}
 
-    // Parse JSON payload from the request
-    var requestPayload struct {
-        SourceFile   string `json:"sourceFile"`
-        ResultFile   string `json:"resultFile"`
-        NumFiles     int    `json:"numFiles"`
-        ExamTitle    string `json:"examTitle"`
-        BeforeTest   string `json:"beforeTest"`
-        NewPage      string `json:"newPage"`
-        Merge        string `json:"merge"`
-    }
+	// Now you have the file and requestData populated.
+	// You can process the file and other form data as per your requirements.
 
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-
-    // Validate input parameters
-    if requestPayload.NumFiles <= 0 {
-        http.Error(w, "Invalid numFiles parameter", http.StatusBadRequest)
-        return
-    }
-
-    // Generate the test using the extracted parameters
-    err = generateTest(
-        sourceFilePath,
-        requestPayload.ResultFile,
-        requestPayload.NumFiles,
-        requestPayload.ExamTitle,
-        requestPayload.BeforeTest,
-        requestPayload.NewPage,
-        requestPayload.Merge,
-    )
-
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-
-    // Return a success message or generated files if applicable
-    // For simplicity, let's just return a success message as JSON
-    response := map[string]string{"message": "Test generated successfully"}
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(response)
+	fmt.Fprintf(w, "Received exam titled: %s\n", requestData.ExamTitle)
 }
 
 func main() {
-    http.HandleFunc("/generate-test", generateTestHandler)
-    port := "8080"
-    fmt.Printf("Server listening on port %s...\n", port)
-    http.ListenAndServe(":"+port, nil)
+	r := mux.NewRouter()
+	r.HandleFunc("/generate-test", generateTestHandler).Methods("POST")
+
+	http.Handle("/", r)
+	http.ListenAndServe(":8080", nil)
 }

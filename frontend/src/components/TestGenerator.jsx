@@ -3,6 +3,7 @@ import { Formik, Field, Form, ErrorMessage } from "formik";
 import axios from "axios"; // Import Axios
 // Utility function
 function getResultFileName(sourceFileName) {
+  console.log("from getResultFileName:", sourceFileName);
   // Extract the name without the extension and append ".zip"
   const nameWithoutExtension = sourceFileName.replace(/\.[^/.]+$/, "");
   return `${nameWithoutExtension}.zip`;
@@ -20,20 +21,26 @@ export default function TestGenerator() {
   const [selectedFile, setSelectedFile] = useState(null);
   const onSubmit = async (values, actions) => {
     try {
+      console.log(selectedFile);
+      console.log("values: ", values.numFiles.toString());
       const formData = new FormData();
-      formData.append("sourceFile", selectedFile);
-      formData.append("resultFile", getResultFileName(values.name));
-      // Add other form fileds to the Form Data
-      formData.append("numFiles", values.numFiles);
-      formData.append("eximTitles", values.examTitle);
-      formData.append("beforeTest", values.beforeTest);
-      formData.append("merge", values.merge);
-      formData.append("newPage", values.newPage);
-
+      formData["sourceFile"] = selectedFile;
+      formData["resultFile"] = getResultFileName(selectedFile.name);
+      formData["numFiles"] = values.numFiles.toString();
+      formData["examTitle"] = values.examTitle;
+      formData["beforeTest"] = values.beforeTest;
+      formData["merge"] = values.merge;
+      formData["newPage"] = values.newPage;
+      console.log("form below:");
+      console.log("form data: ", formData);
       // Post Request to API
-      const response = await axios.post("/generate-test", formData, {
-        headers: { "Content-type": "multipart/form-data" },
-      });
+      const response = await axios.post(
+        "http://localhost:8080/generate-test",
+        formData,
+        {
+          headers: { "Content-type": "multipart/form-data" },
+        }
+      );
 
       // Handle the Api response
       console.log(response.data);

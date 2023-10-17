@@ -1,0 +1,8 @@
+curl -X POST -H "Content-Type: multipart/form-data" \
+  -F "sourceFile=@example_test.txt" \
+  -F "numFiles=1" \
+  -F "examTitle=YourExamTitle" \
+  -F "beforeTest=YourBeforeTestValue" \
+  -F "merge=true" \
+  -F "newPage=true" \
+  http://localhost:8080/generate-test
