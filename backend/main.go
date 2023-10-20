@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -280,17 +281,20 @@ return nil
 }
 
 type RequestData struct {
-	NumFiles     int    `schema:"numFiles"`
-	ExamTitle    string `schema:"examTitle"`
-	BeforeTest   string `schema:"beforeTest"`
-	Merge        bool   `schema:"merge"`
-	NewPage      bool   `schema:"newPage"`
+    NumFiles     int    `schema:"numFiles"`
+    ExamTitle    string `schema:"examTitle"`
+    BeforeTest   string `schema:"beforeTest"`
+    Merge        bool   `schema:"merge"`
+    NewPage      bool   `schema:"newPage"`
+    ResultFile   string `schema:"resultFile"`
 }
 
 func generateTestHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse multipart form
 	err := r.ParseMultipartForm(10 << 20) // 10 MB as max size
+
 	if err != nil {
+		log.Println("Error parsing form:", err)  // This line prints the error to the console
 		http.Error(w, "Unable to parse form", http.StatusBadRequest)
 		return
 	}
@@ -300,6 +304,7 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to get file", http.StatusBadRequest)
 		return
 	}
+
 	defer file.Close()
 
 	dst, err := os.Create("filename.txt")
@@ -314,18 +319,25 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
     	http.Error(w, "Unable to save file on server", http.StatusInternalServerError)
     	return
 	}
-
 	decoder := schema.NewDecoder()
 	var requestData RequestData
 	if err := decoder.Decode(&requestData, r.PostForm); err != nil {
-		http.Error(w, "Error decoding form data", http.StatusBadRequest)
-		return
+		fmt.Println("Decoding error:", err)
+    	http.Error(w, "Error decoding form data", http.StatusBadRequest)
+    	return
 	}
 
 	// Now you have the file and requestData populated.
 	// You can process the file and other form data as per your requirements.
 
-	fmt.Fprintf(w, "Received exam titled: %s\n", requestData.ExamTitle)
+	fmt.Println(w, "Received exam titled: %s\n", requestData.ExamTitle)
+	fmt.Println(requestData.ExamTitle)
+	fmt.Println(requestData.NumFiles)
+    fmt.Println(requestData.ExamTitle)
+    fmt.Println(requestData.BeforeTest)
+    fmt.Println(requestData.Merge)
+    fmt.Println(requestData.NewPage)
+    fmt.Println(requestData.ResultFile)
 }
 
 func main() {

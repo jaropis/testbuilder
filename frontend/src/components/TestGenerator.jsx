@@ -24,23 +24,17 @@ export default function TestGenerator() {
       console.log(selectedFile);
       console.log("values: ", values.numFiles.toString());
       const formData = new FormData();
-      formData["sourceFile"] = selectedFile;
-      formData["resultFile"] = getResultFileName(selectedFile.name);
-      formData["numFiles"] = values.numFiles.toString();
-      formData["examTitle"] = values.examTitle;
-      formData["beforeTest"] = values.beforeTest;
-      formData["merge"] = values.merge;
-      formData["newPage"] = values.newPage;
+      formData.append("sourceFile", selectedFile);
+      formData.append("resultFile", getResultFileName(selectedFile.name));
+      formData.append("numFiles", values.numFiles.toString());
+      formData.append("examTitle", values.examTitle);
+      formData.append("beforeTest", values.beforeTest);
+      formData.append("merge", values.merge);
+      formData.append("newPage", values.newPage);
       console.log("form below:");
       console.log("form data: ", formData);
       // Post Request to API
-      const response = await axios.post(
-        "http://localhost:8080/generate-test",
-        formData,
-        {
-          headers: { "Content-type": "multipart/form-data" },
-        }
-      );
+      const response = await axios.post("/generate-test", formData);
 
       // Handle the Api response
       console.log(response.data);
