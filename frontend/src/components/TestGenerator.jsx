@@ -6,7 +6,7 @@ function getResultFileName(sourceFileName) {
   console.log("from getResultFileName:", sourceFileName);
   // Extract the name without the extension and append ".zip"
   const nameWithoutExtension = sourceFileName.replace(/\.[^/.]+$/, "");
-  return `${nameWithoutExtension}.zip`;
+  return nameWithoutExtension;
 }
 
 export default function TestGenerator() {

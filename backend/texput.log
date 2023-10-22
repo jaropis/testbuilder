@@ -1,18 +1,19 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.9.29)  21 OCT 2023 19:26
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.9.29)  22 OCT 2023 11:55
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
-**results/Users/jaropis/projects/testbuilder/backend/example_test.zip1.tex
+**uploads/9c1edfbc-7c3b-4f57-a3de-0bab06ef58ac/uploads/9c1edfbc-7c3b-4f57-a3de-
+0bab06ef58ac/example_test.zip1.tex
 
 ! Emergency stop.
-<*> ...s/testbuilder/backend/example_test.zip1.tex
+<*> ...f57-a3de-0bab06ef58ac/example_test.zip1.tex
                                                   
 End of file on the terminal!
 
  
 Here is how much of TeX's memory you used:
  4 strings out of 478994
- 164 string characters out of 5858184
+ 203 string characters out of 5858184
  283044 words of memory out of 5000000
  17591 multiletter control sequences out of 15000+600000
  403430 words of font info for 27 fonts, out of 8000000 for 9000

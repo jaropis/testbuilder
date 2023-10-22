@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -68,6 +69,8 @@ func createTest(
 	exam_path string,
 	header string,
 	footer string) {
+	fmt.Println("exam_path:")
+	fmt.Println(exam_path)
 	texFile, err := os.Create(exam_path)
 	if err != nil {
 		fmt.Println(err)
@@ -104,7 +107,7 @@ func createTest(
 }
 
 // function saving the test.sty file to the same location as the test LaTeX files (necessary for compilation)
-func saveTestStyle(path string) {
+func saveTestStyle(path, workingPath string) {
 	test_sty := `
 \ProvidesPackage{test}
 \topmargin-1cm
@@ -152,15 +155,14 @@ func saveTestStyle(path string) {
 }
 \newcommand{\wektor}[1]{\overrightarrow{#1}}
 	`
-	wd, _ := os.Getwd()
-	texFile, _ := os.Create(filepath.Join(wd, filepath.Dir(path), "test.sty"))
+	texFile, _ := os.Create(filepath.Join(workingPath, "test.sty"))
 	defer texFile.Close()
 	texFile.WriteString(test_sty)
 }
 
-func getPdfFiles() ([]string, error) {
+func getPdfFiles(fullpath string) ([]string, error) {
 	var pdfFiles []string
-	err := filepath.Walk("/results/", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(fullpath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -179,10 +181,9 @@ func getPdfFiles() ([]string, error) {
 	return pdfFiles, nil
 }
 
-func merge() {
+func merge(fullpath string) {
 	// get pdf files
-	files, err := getPdfFiles()
-	fmt.Println(files)
+	files, err := getPdfFiles(fullpath)
 	if err != nil {
 		fmt.Printf("error getting pdf files: %v\n", err)
 		return
@@ -205,11 +206,13 @@ func pageCounter(path string) (int, error) {
 
 // where it all happens
 func generateTest(
-    sourceFile, resultFile string,
+    workingPath, inputFileName, outputFileName string,
     numFiles int,
     examTitle, beforeTest string, 
 	newPage, merge_str bool,
 ) error {
+	sourceFile := path.Join(workingPath, inputFileName)
+	resultFile := path.Join(workingPath, outputFileName)
 	const header_start = ` \documentclass[12pt]{article}
 	\usepackage{test}
 	\begin{document}
@@ -251,38 +254,44 @@ func generateTest(
 		footer = footer1
 	}
 	header := header_start + examTitle + header_middle + beforeTest + header_end
-	fmt.Println("sourceFile:")
-	fmt.Println(sourceFile)
 	all_questions := readAndFill(sourceFile)
 	var outputFileNames []string
-	wd, _ := os.Getwd()
 	for idx := 0; idx < numFiles; idx++ {
-		outputfilename := filepath.Join(wd, "results", resultFile+strconv.Itoa(idx+1)+".tex")
+		outputfilename := outputFileName+strconv.Itoa(idx+1)+".tex"
 		outputFileNames = append(outputFileNames, outputfilename)
 		createTest(
 			all_questions,
-			outputfilename,
+			path.Join(workingPath, outputfilename),
 			header,
 			footer)
 	}
 	
-	saveTestStyle(resultFile)
-	oldPath := wd
-	fmt.Println("dictionary to change to")
-	fmt.Println(filepath.Dir(outputFileNames[0]))
-	os.Chdir(filepath.Dir(outputFileNames[0]))
+	saveTestStyle(resultFile, workingPath)
+	oldPath, _ := os.Getwd()
+	os.Chdir(workingPath)
 	for _, filename := range outputFileNames {
-		fmt.Println("filename:")
-		fmt.Println(filename)
-		cmd := exec.Command("/Library/TeX/texbin/pdflatex", filename)
+		// fmt.Println(filename)
+		// cmd_x := exec.Command("pwd")
+		// output, err := cmd_x.Output()
+		// if err != nil {
+		// 	fmt.Println("Error executing pwd:", err)
+		// }
+		// fmt.Println("Current working directory:", string(output))
+		// cmd_y := exec.Command("ls")
+		// output_y, err := cmd_y.Output()
+		// if err != nil {
+		// 	fmt.Println("Error executing pwd:", err)
+		// }
+		// fmt.Println("files inside:", string(output_y))
+		cmd := exec.Command("pdflatex", filename)
 		cmd.Output()
-		cmd2 := exec.Command("/Library/TeX/texbin/pdflatex", filename)
+		cmd2 := exec.Command("pdflatex", filename)
 		cmd2.Output()
 	}
 
 	time.Sleep(time.Duration(numFiles) * 5 * time.Second)
 	if merge_str {
-		merge()
+		merge(workingPath)
 	}
 	os.Chdir(oldPath)
 // TODO handle error
@@ -326,14 +335,13 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 	folderName :=generateUniqueFolderNameWithUUID()
 	err = createFolder(folderName)
-	fmt.Println("2")
 	if err != nil {
     	http.Error(w, "Unable to create folder on server", http.StatusInternalServerError)
     	return
 	}
-	fullPath := filepath.Join("uploads", folderName, "filename.txt")
+	workingPath := filepath.Join("uploads", folderName)
+	fullPath := filepath.Join(workingPath, "filename.txt")
 	dst, err := os.Create(fullPath)
-	fmt.Println(fullPath)
 	if err != nil {
     	http.Error(w, "Unable to create file on server", http.StatusInternalServerError)
     	return
@@ -356,7 +364,7 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
 	// Now you have the file and requestData populated.
 	// You can process the file and other form data as per your requirements.
 	generateTest(
-		fullPath, requestData.ResultFile,
+		workingPath, "filename.txt", requestData.ResultFile,
 		requestData.NumFiles,
 		requestData.ExamTitle, requestData.BeforeTest, requestData.NewPage, requestData.Merge,
 	)
