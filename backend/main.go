@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/ledongthuc/pdf"
@@ -159,7 +160,7 @@ func saveTestStyle(path string) {
 
 func getPdfFiles() ([]string, error) {
 	var pdfFiles []string
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk("/results/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -181,6 +182,7 @@ func getPdfFiles() ([]string, error) {
 func merge() {
 	// get pdf files
 	files, err := getPdfFiles()
+	fmt.Println(files)
 	if err != nil {
 		fmt.Printf("error getting pdf files: %v\n", err)
 		return
@@ -205,9 +207,9 @@ func pageCounter(path string) (int, error) {
 func generateTest(
     sourceFile, resultFile string,
     numFiles int,
-    examTitle, beforeTest, newPage, merge_str string,
+    examTitle, beforeTest string, 
+	newPage, merge_str bool,
 ) error {
-
 	const header_start = ` \documentclass[12pt]{article}
 	\usepackage{test}
 	\begin{document}
@@ -235,7 +237,6 @@ func generateTest(
 // 7) if you want the resulting files to be merged, write "merge" - it will only merge file with an even number of pages so that printing is facilitated`)
 // 		os.Exit(1)
 // 	}
-
 	if examTitle == "" {
 		examTitle = "Egzamin 2023"
 	} 
@@ -244,17 +245,19 @@ func generateTest(
 		beforeTest = `Imię, nazwisko i typ studiów:\underline{\hspace{11.5cm} }`
 	} 
 
-	if newPage == "newpage" {
+	if newPage {
 		footer = footer2
 	} else {
 		footer = footer1
 	}
 	header := header_start + examTitle + header_middle + beforeTest + header_end
+	fmt.Println("sourceFile:")
+	fmt.Println(sourceFile)
 	all_questions := readAndFill(sourceFile)
 	var outputFileNames []string
 	wd, _ := os.Getwd()
 	for idx := 0; idx < numFiles; idx++ {
-		outputfilename := filepath.Join(wd, resultFile+strconv.Itoa(idx+1)+".tex")
+		outputfilename := filepath.Join(wd, "results", resultFile+strconv.Itoa(idx+1)+".tex")
 		outputFileNames = append(outputFileNames, outputfilename)
 		createTest(
 			all_questions,
@@ -262,17 +265,23 @@ func generateTest(
 			header,
 			footer)
 	}
+	
 	saveTestStyle(resultFile)
 	oldPath := wd
+	fmt.Println("dictionary to change to")
+	fmt.Println(filepath.Dir(outputFileNames[0]))
 	os.Chdir(filepath.Dir(outputFileNames[0]))
 	for _, filename := range outputFileNames {
+		fmt.Println("filename:")
+		fmt.Println(filename)
 		cmd := exec.Command("/Library/TeX/texbin/pdflatex", filename)
 		cmd.Output()
 		cmd2 := exec.Command("/Library/TeX/texbin/pdflatex", filename)
 		cmd2.Output()
 	}
+
 	time.Sleep(time.Duration(numFiles) * 5 * time.Second)
-	if merge_str == "merge" {
+	if merge_str {
 		merge()
 	}
 	os.Chdir(oldPath)
@@ -287,6 +296,15 @@ type RequestData struct {
     Merge        bool   `schema:"merge"`
     NewPage      bool   `schema:"newPage"`
     ResultFile   string `schema:"resultFile"`
+}
+
+func generateUniqueFolderNameWithUUID() string {
+	return uuid.New().String()
+}
+
+func createFolder(folderName string) error {
+	path := "./uploads/" + folderName
+	return os.MkdirAll(path, 0755)
 }
 
 func generateTestHandler(w http.ResponseWriter, r *http.Request) {
@@ -306,8 +324,16 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer file.Close()
-
-	dst, err := os.Create("filename.txt")
+	folderName :=generateUniqueFolderNameWithUUID()
+	err = createFolder(folderName)
+	fmt.Println("2")
+	if err != nil {
+    	http.Error(w, "Unable to create folder on server", http.StatusInternalServerError)
+    	return
+	}
+	fullPath := filepath.Join("uploads", folderName, "filename.txt")
+	dst, err := os.Create(fullPath)
+	fmt.Println(fullPath)
 	if err != nil {
     	http.Error(w, "Unable to create file on server", http.StatusInternalServerError)
     	return
@@ -329,15 +355,19 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Now you have the file and requestData populated.
 	// You can process the file and other form data as per your requirements.
-
-	fmt.Println(w, "Received exam titled: %s\n", requestData.ExamTitle)
-	fmt.Println(requestData.ExamTitle)
-	fmt.Println(requestData.NumFiles)
-    fmt.Println(requestData.ExamTitle)
-    fmt.Println(requestData.BeforeTest)
-    fmt.Println(requestData.Merge)
-    fmt.Println(requestData.NewPage)
-    fmt.Println(requestData.ResultFile)
+	generateTest(
+		fullPath, requestData.ResultFile,
+		requestData.NumFiles,
+		requestData.ExamTitle, requestData.BeforeTest, requestData.NewPage, requestData.Merge,
+	)
+	// fmt.Println(w, "Received exam titled: %s\n", requestData.ExamTitle)
+	// fmt.Println(requestData.ExamTitle)
+	// fmt.Println(requestData.NumFiles)
+    // fmt.Println(requestData.ExamTitle)
+    // fmt.Println(requestData.BeforeTest)
+    // fmt.Println(requestData.Merge)
+    // fmt.Println(requestData.NewPage)
+    // fmt.Println(requestData.ResultFile)
 }
 
 func main() {
