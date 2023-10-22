@@ -69,8 +69,6 @@ func createTest(
 	exam_path string,
 	header string,
 	footer string) {
-	fmt.Println("exam_path:")
-	fmt.Println(exam_path)
 	texFile, err := os.Create(exam_path)
 	if err != nil {
 		fmt.Println(err)
@@ -162,22 +160,27 @@ func saveTestStyle(path, workingPath string) {
 
 func getPdfFiles(fullpath string) ([]string, error) {
 	var pdfFiles []string
-	err := filepath.Walk(fullpath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if filepath.Ext(path) == ".pdf" {
-			if pages, _ := pageCounter(path); pages%2 == 0 { // necessary for printing
-				pdfFiles = append(pdfFiles, path)
-			} else {
-				fmt.Println("file ", path, " has over 6 pages")
-			}
-		}
-		return nil
-	})
+	fmt.Println(fullpath)
+	// Open the directory
+	f, err := os.Open(fullpath)
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
+
+	// Read all files in the directory
+	files, err := f.Readdir(-1) // -1 means to return all files
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter for PDF files
+	for _, file := range files {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".pdf" {
+			pdfFiles = append(pdfFiles, filepath.Join(fullpath, file.Name()))
+		}
+	}
+
 	return pdfFiles, nil
 }
 
@@ -188,7 +191,8 @@ func merge(fullpath string) {
 		fmt.Printf("error getting pdf files: %v\n", err)
 		return
 	}
-
+	fmt.Println(fullpath)
+	fmt.Println(files)
 	command := []string{"merge", "merged_test.pdf"}
 	command = append(command, files...)
 	cmd := exec.Command("/opt/homebrew/bin/pdfcpu", command...)
@@ -270,30 +274,16 @@ func generateTest(
 	oldPath, _ := os.Getwd()
 	os.Chdir(workingPath)
 	for _, filename := range outputFileNames {
-		// fmt.Println(filename)
-		// cmd_x := exec.Command("pwd")
-		// output, err := cmd_x.Output()
-		// if err != nil {
-		// 	fmt.Println("Error executing pwd:", err)
-		// }
-		// fmt.Println("Current working directory:", string(output))
-		// cmd_y := exec.Command("ls")
-		// output_y, err := cmd_y.Output()
-		// if err != nil {
-		// 	fmt.Println("Error executing pwd:", err)
-		// }
-		// fmt.Println("files inside:", string(output_y))
 		cmd := exec.Command("pdflatex", filename)
 		cmd.Output()
 		cmd2 := exec.Command("pdflatex", filename)
 		cmd2.Output()
 	}
-
+	os.Chdir(oldPath)
 	time.Sleep(time.Duration(numFiles) * 5 * time.Second)
 	if merge_str {
 		merge(workingPath)
 	}
-	os.Chdir(oldPath)
 // TODO handle error
 return nil
 }
@@ -368,14 +358,6 @@ func generateTestHandler(w http.ResponseWriter, r *http.Request) {
 		requestData.NumFiles,
 		requestData.ExamTitle, requestData.BeforeTest, requestData.NewPage, requestData.Merge,
 	)
-	// fmt.Println(w, "Received exam titled: %s\n", requestData.ExamTitle)
-	// fmt.Println(requestData.ExamTitle)
-	// fmt.Println(requestData.NumFiles)
-    // fmt.Println(requestData.ExamTitle)
-    // fmt.Println(requestData.BeforeTest)
-    // fmt.Println(requestData.Merge)
-    // fmt.Println(requestData.NewPage)
-    // fmt.Println(requestData.ResultFile)
 }
 
 func main() {
