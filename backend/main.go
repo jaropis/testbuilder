@@ -160,7 +160,6 @@ func saveTestStyle(path, workingPath string) {
 
 func getPdfFiles(fullpath string) ([]string, error) {
 	var pdfFiles []string
-	fmt.Println(fullpath)
 	// Open the directory
 	f, err := os.Open(fullpath)
 	if err != nil {
@@ -191,9 +190,7 @@ func merge(fullpath string) {
 		fmt.Printf("error getting pdf files: %v\n", err)
 		return
 	}
-	fmt.Println(fullpath)
-	fmt.Println(files)
-	command := []string{"merge", "merged_test.pdf"}
+	command := []string{"merge", path.Join(fullpath, "merged_test.pdf")}
 	command = append(command, files...)
 	cmd := exec.Command("/opt/homebrew/bin/pdfcpu", command...)
 	cmd.Output()
