@@ -1,0 +1,11 @@
+[package]
+name = "testbuilder"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "tb"
+path = "src/main.rs"
+
+[dependencies]
+rand = "0.8"
