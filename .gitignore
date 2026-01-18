@@ -30,3 +30,5 @@ uploads/
 # Rust
 target/
 Cargo.lock
+
+CLAUDE.md
