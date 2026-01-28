@@ -18,8 +18,19 @@ fn get_header_condition(current_value: &str) -> bool {
         && !current_value.starts_with("D)")
 }
 
-/// Reads the file and fills a map with questions as keys and their respective answers as values
-fn read_and_fill(filepath: &str) -> Result<HashMap<String, Vec<String>>, std::io::Error> {
+/// Converts answer letter (A, B, C, D) to index (0, 1, 2, 3)
+fn answer_letter_to_index(letter: char) -> Option<usize> {
+    match letter {
+        'A' => Some(0),
+        'B' => Some(1),
+        'C' => Some(2),
+        'D' => Some(3),
+        _ => None,
+    }
+}
+
+/// Reads the file and fills a map with questions as keys and (answers, correct_index) as values
+fn read_and_fill(filepath: &str) -> Result<HashMap<String, (Vec<String>, Option<usize>)>, std::io::Error> {
     let file = File::open(filepath)?;
     let reader = BufReader::new(file);
     let file_content: Vec<String> = reader.lines().collect::<Result<Vec<_>, _>>()?;
@@ -44,7 +55,18 @@ fn read_and_fill(filepath: &str) -> Result<HashMap<String, Vec<String>>, std::io
             }
 
             idx += counter;
-            all_questions.insert(current_value.clone(), new_set);
+
+            // Look for ANSWER line after the answers
+            let mut correct_index: Option<usize> = None;
+            if idx + 1 < file_content.len() && file_content[idx + 1].starts_with("ANSWER") {
+                let answer_line = &file_content[idx + 1];
+                // Parse "ANSWER X" where X is A, B, C, or D
+                if let Some(letter) = answer_line.trim().chars().last() {
+                    correct_index = answer_letter_to_index(letter);
+                }
+            }
+
+            all_questions.insert(current_value.clone(), (new_set, correct_index));
         }
         idx += 1;
     }
@@ -54,11 +76,12 @@ fn read_and_fill(filepath: &str) -> Result<HashMap<String, Vec<String>>, std::io
 
 /// Creates a test LaTeX file
 fn create_test(
-    all_questions: &HashMap<String, Vec<String>>,
+    all_questions: &HashMap<String, (Vec<String>, Option<usize>)>,
     exam_path: &Path,
     header: &str,
     footer: &str,
     rng: &mut impl Rng,
+    mark_correct: bool,
 ) -> Result<(), std::io::Error> {
     let mut tex_file = File::create(exam_path)?;
     write!(tex_file, "{}", header)?;
@@ -68,26 +91,40 @@ fn create_test(
     questions.sort_by(|a, b| a.0.cmp(b.0));
     questions.shuffle(rng);
 
-    for (key, value) in questions {
+    for (key, (answers_orig, correct_index)) in questions {
         let one_line = r"\item";
         writeln!(tex_file, "{} {}\n", one_line, key)?;
 
-        let mut answers = value.clone();
+        // Create indexed answers to track which one is correct after shuffling
+        let mut indexed_answers: Vec<(usize, &String)> = answers_orig.iter().enumerate().collect();
+
         // If the length is 3 or more, shuffle (2 is usually the true/false case)
-        if answers.len() > 2 {
-            answers.shuffle(rng);
+        if indexed_answers.len() > 2 {
+            indexed_answers.shuffle(rng);
         }
 
-        for (i, val) in answers.iter().enumerate() {
-            let text = match i {
-                0 => "a)",
-                1 => r"\hspace{1cm}b)",
-                2 => r"\hspace{1cm}c)",
-                3 => r"\hspace{1cm}d)",
+        for (i, (orig_idx, val)) in indexed_answers.iter().enumerate() {
+            let letter = match i {
+                0 => "a",
+                1 => "b",
+                2 => "c",
+                3 => "d",
                 _ => "",
             };
+
+            let spacing = if i == 0 { "" } else { r"\hspace{1cm}" };
+
+            // Check if this answer is the correct one
+            let is_correct = mark_correct && correct_index.map_or(false, |ci| ci == *orig_idx);
+
             let v_percent = val.replace('%', r"\%");
-            write!(tex_file, "{}~{}", text, v_percent)?;
+
+            if is_correct {
+                // Mark correct answer with circle around the letter
+                write!(tex_file, r"{}\correctmark{{{}}}~{}", spacing, letter, v_percent)?;
+            } else {
+                write!(tex_file, "{}{})~{}", spacing, letter, v_percent)?;
+            }
         }
         writeln!(tex_file)?;
     }
@@ -144,6 +181,8 @@ fn save_test_style(working_path: &Path) -> Result<(), std::io::Error> {
 \end{tabular}\\ \vspace{0.5cm}
 }
 \newcommand{\wektor}[1]{\overrightarrow{#1}}
+\usepackage{tikz}
+\newcommand{\correctmark}[1]{\tikz[baseline=(char.base)]{\node[shape=circle,draw,inner sep=1pt](char){#1})}}
 	"#;
 
     let mut tex_file = File::create(working_path.join("test.sty"))?;
@@ -236,6 +275,7 @@ fn generate_test(
     new_page: bool,
     merge_pdfs: bool,
     seed: Option<u64>,
+    mark_correct: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let header_start = r#" \documentclass[12pt]{article}
 	\usepackage{test}
@@ -275,9 +315,9 @@ fn generate_test(
         let output_tex_path = working_dir.join(&output_filename);
 
         if let Some(ref mut rng) = seeded_rng {
-            create_test(&all_questions, &output_tex_path, &header, footer, rng)?;
+            create_test(&all_questions, &output_tex_path, &header, footer, rng, mark_correct)?;
         } else {
-            create_test(&all_questions, &output_tex_path, &header, footer, &mut thread_rng())?;
+            create_test(&all_questions, &output_tex_path, &header, footer, &mut thread_rng(), mark_correct)?;
         }
     }
 
@@ -313,8 +353,8 @@ fn generate_test(
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() < 8 || args.len() > 9 {
-        eprintln!("There must be 7 or 8 arguments to the call:");
+    if args.len() < 8 || args.len() > 10 {
+        eprintln!("There must be 7 to 9 arguments to the call:");
         eprintln!("1) the source file with the test in format described by the README");
         eprintln!("2) the result file name - it will be extended by the number of the individual file");
         eprintln!("3) the number of files to generate (an integer number, of course)");
@@ -322,7 +362,8 @@ fn main() {
         eprintln!("5) what you want to go before the test, e.g. \"Imię, nazwisko i typ studiów:\\underline{{\\hspace{{11.5cm}}}}\"");
         eprintln!("6) if you want a new page at the end of the test, write \"newpage\", otherwise put _");
         eprintln!("7) if you want the resulting files to be merged, write \"merge\"");
-        eprintln!("8) [optional] seed for reproducible shuffling (integer) - same seed produces same output");
+        eprintln!("8) [optional] seed for reproducible shuffling (integer), use \"_\" to skip");
+        eprintln!("9) [optional] \"mark\" to mark correct answers with a circle in the output");
         std::process::exit(1);
     }
 
@@ -337,14 +378,18 @@ fn main() {
     let new_page = args[6] == "newpage";
     let merge_pdfs = args[7] == "merge";
 
-    let seed: Option<u64> = if args.len() == 9 {
+    // Parse optional seed (8th argument)
+    let seed: Option<u64> = if args.len() >= 9 && args[8] != "_" {
         Some(args[8].parse().unwrap_or_else(|_| {
-            eprintln!("Error: Seed must be a valid integer");
+            eprintln!("Error: Seed must be a valid integer or \"_\" to skip");
             std::process::exit(1);
         }))
     } else {
         None
     };
+
+    // Parse optional mark_correct (9th argument)
+    let mark_correct = args.len() >= 10 && args[9] == "mark";
 
     if let Err(e) = generate_test(
         source_file,
@@ -355,6 +400,7 @@ fn main() {
         new_page,
         merge_pdfs,
         seed,
+        mark_correct,
     ) {
         eprintln!("Error generating test: {}", e);
         std::process::exit(1);
