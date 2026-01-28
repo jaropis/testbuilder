@@ -182,7 +182,8 @@ fn save_test_style(working_path: &Path) -> Result<(), std::io::Error> {
 }
 \newcommand{\wektor}[1]{\overrightarrow{#1}}
 \usepackage{tikz}
-\newcommand{\correctmark}[1]{\tikz[baseline=(char.base)]{\node[shape=circle,draw,inner sep=1pt](char){#1})}}
+\newcommand{\correctmark}[1]{\tikz[baseline=(char.base)]{\node[shape=circle,draw,inner sep=1pt](char){#1)};}}
+
 	"#;
 
     let mut tex_file = File::create(working_path.join("test.sty"))?;
