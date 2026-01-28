@@ -38,9 +38,16 @@ Run the `tb` binary with the following arguments:
 5. What should go before the beginning of the test (LaTeX formatted, e.g. name/surname fields)
 6. "newpage" to add a page break at the end, or "_" to skip
 7. "merge" to merge all PDFs into one file, or "_" to skip
+8. (Optional) Seed for reproducible shuffling - an integer that ensures the same question and answer order each time
 
 Example usage:
-`./tb egzamin2023.txt results/res_test 3 "Biophysics, exam 2023" "Name, Surname, Group  \underline{\hspace{11.5cm}}" newpage merge`
+```bash
+# Random shuffling (different each run)
+./tb egzamin2023.txt results/res_test 3 "Biophysics, exam 2023" "Name, Surname, Group  \underline{\hspace{11.5cm}}" newpage merge
+
+# Reproducible shuffling (same output every time with seed 42)
+./tb egzamin2023.txt results/res_test 3 "Biophysics, exam 2023" "Name, Surname, Group  \underline{\hspace{11.5cm}}" newpage merge 42
+```
 
 This will output 3 LaTeX files named `res_test1.tex`, `res_test2.tex`, and `res_test3.tex`, along with the LaTeX style file `test.sty`. All files will be automatically compiled to PDF using `pdflatex`. Each test will have different question and answer orders. For example, the first resulting PDF may look like this:
 

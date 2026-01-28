@@ -1,5 +1,6 @@
+use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::{Rng, SeedableRng, thread_rng};
 use std::collections::HashMap;
 use std::env;
 use std::fs::{self, File};
@@ -57,19 +58,24 @@ fn create_test(
     exam_path: &Path,
     header: &str,
     footer: &str,
+    rng: &mut impl Rng,
 ) -> Result<(), std::io::Error> {
     let mut tex_file = File::create(exam_path)?;
     write!(tex_file, "{}", header)?;
 
-    for (key, value) in all_questions.iter() {
+    // Sort questions by key for reproducible order, then shuffle with provided RNG
+    let mut questions: Vec<_> = all_questions.iter().collect();
+    questions.sort_by(|a, b| a.0.cmp(b.0));
+    questions.shuffle(rng);
+
+    for (key, value) in questions {
         let one_line = r"\item";
         writeln!(tex_file, "{} {}\n", one_line, key)?;
 
         let mut answers = value.clone();
         // If the length is 3 or more, shuffle (2 is usually the true/false case)
         if answers.len() > 2 {
-            let mut rng = thread_rng();
-            answers.shuffle(&mut rng);
+            answers.shuffle(rng);
         }
 
         for (i, val) in answers.iter().enumerate() {
@@ -229,6 +235,7 @@ fn generate_test(
     before_test: &str,
     new_page: bool,
     merge_pdfs: bool,
+    seed: Option<u64>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let header_start = r#" \documentclass[12pt]{article}
 	\usepackage{test}
@@ -259,11 +266,19 @@ fn generate_test(
     let output_base = output_path.file_stem().unwrap_or_default().to_string_lossy();
     let mut output_filenames = Vec::new();
 
+    // Create RNG - seeded if seed provided, otherwise use thread_rng
+    let mut seeded_rng: Option<StdRng> = seed.map(StdRng::seed_from_u64);
+
     for idx in 0..num_files {
         let output_filename = format!("{}{}.tex", output_base, idx + 1);
         output_filenames.push(output_filename.clone());
         let output_tex_path = working_dir.join(&output_filename);
-        create_test(&all_questions, &output_tex_path, &header, footer)?;
+
+        if let Some(ref mut rng) = seeded_rng {
+            create_test(&all_questions, &output_tex_path, &header, footer, rng)?;
+        } else {
+            create_test(&all_questions, &output_tex_path, &header, footer, &mut thread_rng())?;
+        }
     }
 
     save_test_style(working_dir)?;
@@ -298,8 +313,8 @@ fn generate_test(
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() != 8 {
-        eprintln!("There must be 7 arguments to the call:");
+    if args.len() < 8 || args.len() > 9 {
+        eprintln!("There must be 7 or 8 arguments to the call:");
         eprintln!("1) the source file with the test in format described by the README");
         eprintln!("2) the result file name - it will be extended by the number of the individual file");
         eprintln!("3) the number of files to generate (an integer number, of course)");
@@ -307,6 +322,7 @@ fn main() {
         eprintln!("5) what you want to go before the test, e.g. \"Imię, nazwisko i typ studiów:\\underline{{\\hspace{{11.5cm}}}}\"");
         eprintln!("6) if you want a new page at the end of the test, write \"newpage\", otherwise put _");
         eprintln!("7) if you want the resulting files to be merged, write \"merge\"");
+        eprintln!("8) [optional] seed for reproducible shuffling (integer) - same seed produces same output");
         std::process::exit(1);
     }
 
@@ -321,6 +337,15 @@ fn main() {
     let new_page = args[6] == "newpage";
     let merge_pdfs = args[7] == "merge";
 
+    let seed: Option<u64> = if args.len() == 9 {
+        Some(args[8].parse().unwrap_or_else(|_| {
+            eprintln!("Error: Seed must be a valid integer");
+            std::process::exit(1);
+        }))
+    } else {
+        None
+    };
+
     if let Err(e) = generate_test(
         source_file,
         output_file,
@@ -329,6 +354,7 @@ fn main() {
         before_test,
         new_page,
         merge_pdfs,
+        seed,
     ) {
         eprintln!("Error generating test: {}", e);
         std::process::exit(1);
